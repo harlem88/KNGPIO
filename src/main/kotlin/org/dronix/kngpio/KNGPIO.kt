@@ -4,10 +4,7 @@ import kotlinx.cinterop.*
 import org.dronix.kngpio.gpio.Direction
 import org.dronix.kngpio.gpio.Edge
 import org.dronix.kngpio.gpio.Value
-import platform.posix.O_RDWR
-import platform.posix.open
-import platform.posix.read
-import platform.posix.write
+import platform.posix.*
 
 
 class KNGPIO(gpio: Int, direction: Direction, edge: Edge?, option: String?) {
@@ -39,14 +36,18 @@ class KNGPIO(gpio: Int, direction: Direction, edge: Edge?, option: String?) {
 
     }
 
-    public fun get(): Value? {
-//        val p : CPointer<ByteVar>
-//        var point : CValuesRef<ByteVar>
-//        read(fd, cValuesOf(p),1)
-//
-        return Value.HIGH
-    }
+    public fun get() = memScoped {
+        val result = ByteArray(1)
+        val res = read(fd, result.refTo(0), 1)
+        lseek(fd, 0, SEEK_SET)
+        if(res <= 0 ) return@memScoped null
 
+        when (result[0].toInt()){
+            48 -> Value.LOW
+            49 -> Value.HIGH
+            else -> return@memScoped null
+        }
+    }
 
     public fun set(value: Value) {
         when (value) {
